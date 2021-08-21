@@ -3,42 +3,20 @@
 const stateManager = new StateManager();
 const BaseUrl = 'http://www.scpwiki.com/scp-';
 
-/**
- * Downloads given contents
- * @param {string} name - Filename to use
- * @param {object} contents - Contents to download
- * @param {string} mime_type - Mime type. If not specified, assumes text/plain.
- */
-function download(name, contents, mime_type) {
-    mime_type = mime_type || "text/plain";
-
-    var blob = new Blob([contents], { type: mime_type });
-
-    var dlink = document.createElement('a');
-    dlink.download = name;
-    dlink.href = window.URL.createObjectURL(blob);
-    dlink.onclick = function (e) {
-        // revokeObjectURL needs a delay to work properly
-        var that = this;
-        setTimeout(function () {
-            window.URL.revokeObjectURL(that.href);
-        }, 1500);
-    };
-
-    dlink.click();
-    dlink.remove();
+function exportRaw(){
+    console.log("exportttt");
 }
 
 /**
  * Processes popup page - lists read pages & prepares download link
  */
  function process() {
+    console.log("process");
     var readPages = stateManager.getStates(true);
 
     var pageReadCount = $('#pages-read-count');
     pageReadCount.text(readPages.length);
 
-    var jsonList = {};
     var list = $('ul#read-pages');
     for (var i = 0; i < readPages.length; i++) {
         // Create link to read page & add to list
@@ -48,23 +26,18 @@ function download(name, contents, mime_type) {
         var a = $('<a>').attr('href', href).text(readPages[i].title);
         var li = $('<li>').addClass('item-read').append(a);
         list.append(li);
-        jsonList[href] = href;
     }
 
-    // If we have read pages, show download link
-    if (readPages.length > 0) {
-        $('#download-button').click(function () {
-            download('SCPReadList.json', JSON.stringify(jsonList), 'application/json');
-        })
-    } else {
-        $('#download-button').hide();
-    }
+    $('#wipe-button').click(function () {
+        stateManager.wipeData();
+    });
 }
 
 /**
  * Main entry point
  */
 function main() {
+    console.log("main");
     // Initialize state manager.
     stateManager.initialize(process);
 }

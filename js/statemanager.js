@@ -17,20 +17,20 @@ class StateManager {
    * 
    * @param {*} onSuccess - Callback on success
    * @param {*} onError - Callback on error
-   * @param {*} onUpdate - Callback on data updates
    */
-  initialize(onSuccess, onError, onUpdate) {
-    this._loadData();
-
+  initialize(onSuccess, onError) {
     this.database = new localStorageDB("scpdb", localStorage);
 
     //Check if freshly created, and then init tables etc
     if (this.database.isNew()){
-
+      console.log("Creating fresh db");
       //Create pages table
       this.database.createTable("Pages", ["uri", "state", "title"]);
 
       this.database.commit();
+    }
+    else{
+      console.log("DB pre existing");
     }
 
     //TODO: Load-Sync from cloud(??)
@@ -87,11 +87,16 @@ class StateManager {
   }
 
   /**
-   * Returns all read / unread states
-   * @param {bool} isRead - whether to get read or unread states.
+   * Returns all read states
    */
-  getStates(isRead = true) {
-    var query = this.database.queryAll("Pages", {query: {state: 1}});
+  getStates() {
+    console.log("GetStates");
+    var query = this.database.queryAll(
+      "Pages", 
+      {query: {state: 1},
+      sort: [["title", "ASC"]]
+    });
+    console.log(query);
     return query;
   }
 
@@ -109,7 +114,10 @@ class StateManager {
           onError(chrome.runtime.lastError);
         }
       } else {
-        if (result) {
+        console.log("Found result:");
+        console.log(result);
+        if (result != null && result.scpdb != null) {
+          console.log('Overwriting localstorage db now');
           localStorage.setItem("db_scpdb", result.scpdb);
         }
         if (onSuccess) {
@@ -135,13 +143,24 @@ class StateManager {
           // }
         } else {
           console.debug(`Saved data with key`);
+          console.log(data);
           // if (onSuccess) {
           //   // onSuccess();
           // }
         }
       });
     }
+
+    wipeData() {
+      console.log("Wiping now");
+      chrome.storage.local.remove("scpdb");
+
+      localStorage.removeItem("db_scpdb");
+    }
   
+    getRaw(){
+      return localStorage.getItem("db_scpdb");
+    }
 
   /**
    * Listens for data updates. On update, re-loads data.
