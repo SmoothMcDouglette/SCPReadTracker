@@ -12,11 +12,6 @@ class StateManager {
   // Key to use
   static _Key = 'scp1';
 
-  constructor() {
-    // console.log("creating bit array");
-    //  this.bitArray = new BitArray(StateManager._DataSize);
-  }
-
   /**
    * Initialize by loading current state.
    * 
@@ -33,7 +28,7 @@ class StateManager {
     if (this.database.isNew()){
 
       //Create pages table
-      this.database.createTable("Pages", ["uri", "state"]);
+      this.database.createTable("Pages", ["uri", "state", "title"]);
 
       this.database.commit();
     }
@@ -63,7 +58,7 @@ class StateManager {
    * @param {function} onSuccess - Callback on success.
    * @param {function} onError - Callback on error.
    */
-  toggleState(url, onSuccess, onError) {
+  toggleState(url, title, onSuccess, onError) {
     
     //TODO: Pass in desired state, don't read
     var queryResult = this.database.queryAll("Pages", {
@@ -83,7 +78,7 @@ class StateManager {
 
     this.database.insertOrUpdate("Pages", 
       { uri: url},
-      { uri: url, state: currentState});
+      { uri: url, state: currentState, title: title});
     this.database.commit();
 
     onSuccess(currentState);

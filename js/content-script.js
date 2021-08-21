@@ -51,6 +51,8 @@ function setImage(isRead) {
   const imgAlt = isRead ? 'Page read' : 'Page unread';
   const img = `<img id="${imgId}" alt="${imgAlt}" src="${imgUrl}">`;
 
+  const title = $('div#page-title').text();
+
   // Force page title to show
   $('div#page-title').show();
 
@@ -61,7 +63,7 @@ function setImage(isRead) {
     imgElement = $(`img#${imgId}`).replaceWith(img);
   }
   imgElement.on('click', function () {
-    stateManager.toggleState(url, function (value) { setImage(value); });
+    stateManager.toggleState(url, title, function (value) { setImage(value); });
   });
 }
 

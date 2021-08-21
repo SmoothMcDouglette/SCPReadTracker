@@ -34,10 +34,7 @@ function download(name, contents, mime_type) {
  */
  function process() {
     var readPages = stateManager.getStates(true);
-    console.log("READ");
-    console.log(readPages);
-    console.log(readPages.length);
-    console.log("-------")
+
     var pageReadCount = $('#pages-read-count');
     pageReadCount.text(readPages.length);
 
@@ -46,7 +43,9 @@ function download(name, contents, mime_type) {
     for (var i = 0; i < readPages.length; i++) {
         // Create link to read page & add to list
         var href = readPages[i].uri;
-        var a = $('<a>').attr('href', href).text(href);
+        console.log("Title is ");
+        console.log(readPages[i].title);
+        var a = $('<a>').attr('href', href).text(readPages[i].title);
         var li = $('<li>').addClass('item-read').append(a);
         list.append(li);
         jsonList[href] = href;
