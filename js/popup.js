@@ -32,9 +32,12 @@ function download(name, contents, mime_type) {
 /**
  * Processes popup page - lists read pages & prepares download link
  */
-function process() {
+ function process() {
     var readPages = stateManager.getStates(true);
-
+    console.log("READ");
+    console.log(readPages);
+    console.log(readPages.length);
+    console.log("-------")
     var pageReadCount = $('#pages-read-count');
     pageReadCount.text(readPages.length);
 
@@ -42,12 +45,11 @@ function process() {
     var list = $('ul#read-pages');
     for (var i = 0; i < readPages.length; i++) {
         // Create link to read page & add to list
-        var href = BaseUrl + readPages[i];
-        var title = 'SCP-' + readPages[i];
-        var a = $('<a>').attr('href', href).text(title);
+        var href = readPages[i].uri;
+        var a = $('<a>').attr('href', href).text(href);
         var li = $('<li>').addClass('item-read').append(a);
         list.append(li);
-        jsonList[href] = title;
+        jsonList[href] = href;
     }
 
     // If we have read pages, show download link
@@ -65,7 +67,7 @@ function process() {
  */
 function main() {
     // Initialize state manager.
-    stateManager.initialize(process, undefined, process);
+    stateManager.initialize(process);
 }
 
 main();

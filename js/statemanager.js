@@ -12,23 +12,9 @@ class StateManager {
   // Key to use
   static _Key = 'scp1';
 
-  // Size to initialize bit array.
-  // Storage.sync limits total data size to ~100KB and per request size to 8KB.
-  // We utilize a bit array to minimize size. 20000 entries stored in Base64 is ~3.3KB. 
-  static _DataSize = 20000;
-
-  static _getValue(url) {
-    // Match url on /scp-XXXX.
-    const RegExpVal = new RegExp('/scp-(\\d+)(?:$|/)', '');
-    var match = url.match(RegExpVal);
-    if (match.length >= 2) {
-      return parseInt(match[1]);
-    }
-    return undefined;
-  }
-
   constructor() {
-    this.bitArray = new BitArray(StateManager._DataSize);
+    // console.log("creating bit array");
+    //  this.bitArray = new BitArray(StateManager._DataSize);
   }
 
   /**
@@ -39,8 +25,21 @@ class StateManager {
    * @param {*} onUpdate - Callback on data updates
    */
   initialize(onSuccess, onError, onUpdate) {
+    this._loadData();
+
+    this.database = new localStorageDB("scpdb", localStorage);
+
+    //Check if freshly created, and then init tables etc
+    if (this.database.isNew()){
+
+      //Create pages table
+      this.database.createTable("Pages", ["uri", "state"]);
+
+      this.database.commit();
+    }
+
+    //TODO: Load-Sync from cloud(??)
     this._loadData(onSuccess, onError);
-    this._listenForUpdates(onUpdate);
   }
 
   /**
@@ -48,11 +47,14 @@ class StateManager {
    * @param {string} url - Page URL. Must match /scp-XXXX format.
    */
   getState(url) {
-    var value = StateManager._getValue(url);
-    if (value === undefined) {
-      throw new Error(`Unsupported url: ${url}`);
+
+    var queryResult = this.database.queryAll("Pages", {query: {uri: url}});
+    if (queryResult.length != 1){
+      return 0;
     }
-    return this.bitArray.get(value) === 0 ? false : true;
+    else{
+      return queryResult[0].state;
+    }
   }
 
   /**
@@ -62,21 +64,31 @@ class StateManager {
    * @param {function} onError - Callback on error.
    */
   toggleState(url, onSuccess, onError) {
-    var value = StateManager._getValue(url);
-    if (value === undefined) {
-      throw new Error(`Unsupported url: ${url}`);
+    
+    //TODO: Pass in desired state, don't read
+    var queryResult = this.database.queryAll("Pages", {
+      query: {uri: url}
+    });
+    var currentState = queryResult[0]?.state;
+
+    if (currentState == undefined){
+      currentState = 1;
+    }
+    else if (currentState == 0){
+      currentState = 1
+    }
+    else{
+      currentState = 0
     }
 
-    // Flip the state
-    var state = this.bitArray.get(value) === 0 ? 1 : 0;
-    this.bitArray.set(value, state);
+    this.database.insertOrUpdate("Pages", 
+      { uri: url},
+      { uri: url, state: currentState});
+    this.database.commit();
 
-    // Persist the data
-    this._saveData(function () {
-      if (onSuccess) {
-        onSuccess(state)
-      }
-    }, onError);
+    onSuccess(currentState);
+
+    this._saveData();
   }
 
   /**
@@ -84,10 +96,8 @@ class StateManager {
    * @param {bool} isRead - whether to get read or unread states.
    */
   getStates(isRead = true) {
-    var states = this.bitArray.filter(function (elem) {
-      return (elem === (isRead ? 1 : 0));
-    });
-    return states;
+    var query = this.database.queryAll("Pages", {query: {state: 1}});
+    return query;
   }
 
   /**
@@ -96,17 +106,16 @@ class StateManager {
    * @param {*} onError  - Callback on error
    */
   _loadData(onSuccess, onError) {
-    var that = this;
-    chrome.storage.sync.get(StateManager._Key, function (result) {
+
+    chrome.storage.local.get("scpdb", function (result) {
       if (chrome.runtime.lastError) {
         console.error(`Failed to read data: ${chrome.runtime.lastError}`);
         if (onError) {
           onError(chrome.runtime.lastError);
         }
       } else {
-        if (result && result[StateManager._Key]) {
-          console.debug(`Loaded data with key '${StateManager._Key}'`);
-          that.bitArray.fromBase64(result[StateManager._Key]);
+        if (result) {
+          localStorage.setItem("db_scpdb", result.scpdb);
         }
         if (onSuccess) {
           onSuccess();
@@ -115,29 +124,29 @@ class StateManager {
     });
   }
 
-  /**
+   /**
    * Internal method to save data to storage.sync
    * @param {*} onSuccess - Callback on success
    * @param {*} onError - Callback on error
    */
-  _saveData(onSuccess, onError) {
-    var data = {};
-    data[StateManager._Key] = this.bitArray.toBase64();
-
-    chrome.storage.sync.set(data, function () {
-      if (chrome.runtime.lastError) {
-        console.error('Failed to save page read data: ' + chrome.runtime.lastError);
-        if (onError) {
-          onError(chrome.runtime.lastError);
+    _saveData() {
+      var localString = localStorage.getItem("db_scpdb");
+      var data = {scpdb: localString};
+      chrome.storage.local.set(data, function () {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to save page read data: ' + chrome.runtime.lastError);
+          // if (onError) {
+          //   // onError(chrome.runtime.lastError);
+          // }
+        } else {
+          console.debug(`Saved data with key`);
+          // if (onSuccess) {
+          //   // onSuccess();
+          // }
         }
-      } else {
-        console.debug(`Saved data with key '${StateManager._Key}'`);
-        if (onSuccess) {
-          onSuccess();
-        }
-      }
-    });
-  }
+      });
+    }
+  
 
   /**
    * Listens for data updates. On update, re-loads data.

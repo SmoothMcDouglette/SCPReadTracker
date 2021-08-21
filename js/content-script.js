@@ -12,16 +12,19 @@ function processScpPage() {
 
   // Match on /scp-XXXX url
   if (!url.match(RegExpUrl)) {
-    return;
+    // return;
   }
 
   // Also match on 'scp' tag, except for scp-001 which doesn't have a tag
   const scpTag = $('div.page-tags span a').filter(function () {
     return $(this).text().toLowerCase().trim() === 'scp';
   });
-  if (!url.includes('/scp-001') && scpTag.length === 0) {
-    return;
-  }
+
+  // Abort for non-content pages TBD
+  // if (!url.includes('/scp-001') && scpTag.length === 0) {
+  //   console.log("no scip tags");
+  //   return;
+  // }
 
   console.debug(`Found scp page: ${url}`);
 
